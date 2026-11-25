@@ -54,7 +54,7 @@ impl Fixture {
             staging.join("herdr-queue"),
         )
         .unwrap();
-        let name = "herdr-queue-v0.2.1-aarch64-apple-darwin.tar.gz";
+        let name = "herdr-queue-v0.2.2-aarch64-apple-darwin.tar.gz";
         assert!(Command::new("tar")
             .args(["-czf"])
             .arg(assets.join(name))
@@ -110,7 +110,7 @@ fn native_version_and_invalid_context_never_contact_an_agent() {
     success(&output);
     assert_eq!(
         String::from_utf8_lossy(&output.stdout).trim(),
-        "Herdr Queue 0.2.1"
+        "Herdr Queue 0.2.2"
     );
     let output = Command::new(env!("CARGO_BIN_EXE_herdr-queue"))
         .arg("open")
@@ -141,7 +141,7 @@ fn launcher_executes_the_native_binary_without_python_uv_or_cargo() {
     success(&output);
     assert_eq!(
         String::from_utf8_lossy(&output.stdout).trim(),
-        "Herdr Queue 0.2.1"
+        "Herdr Queue 0.2.2"
     );
 }
 
@@ -163,7 +163,7 @@ fn installer_uses_the_matching_verified_release_without_a_compiler() {
     success(&output);
     assert_eq!(
         String::from_utf8_lossy(&output.stdout).trim(),
-        "Herdr Queue 0.2.1"
+        "Herdr Queue 0.2.2"
     );
 }
 

@@ -3,7 +3,7 @@ set -eu
 umask 077
 
 PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-VERSION=0.2.1
+VERSION=0.2.2
 cd "$PROJECT_DIR"
 mkdir -p bin
 
