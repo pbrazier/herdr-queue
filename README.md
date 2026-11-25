@@ -1,5 +1,10 @@
 # Herdr Queue
 
+> **About this fork:** this is an English-language fork of
+> [Wormav/herdr-queue](https://github.com/Wormav/herdr-queue). The terminal interface,
+> messages, CLI help and installer are in English, and releases are published from this
+> repository. The screenshot below still shows the original French interface.
+
 For **Herdr Desktop**, see the [Desktop installation and controls](desktop/README.md).
 
 Draft, queue, and send prompts to your AI coding agents from a dedicated terminal panel.
@@ -40,8 +45,10 @@ command = "herdr-drafts.open"
 description = "Open Herdr Queue"
 ```
 
-For a prefix shortcut instead, set `key = "prefix+i"`. With Herdr's default prefix,
-press **Ctrl+B**, then **I**.
+For a prefix shortcut instead, set `key = "prefix+d"`. With Herdr's default prefix,
+press **Ctrl+B**, then **D**. Use a prefix shortcut in macOS Terminal.app, which keeps Cmd
+shortcuts for itself. Plain `prefix+d` is free in Herdr's default keymap; note that
+`prefix+shift+d` closes the current workspace.
 
 Validate and reload the configuration:
 
@@ -104,12 +111,10 @@ large queues and longer sessions can use more. See the [benchmark method](docs/P
 1. Write a prompt. **Enter** adds it to the list; **Shift+Enter** inserts a new line.
 2. Prepare more prompts while your agent works. Edit, delete, or reorder them with the
    controls on each card.
-3. Click **Envoyer** on a particular prompt, or press **Cmd+Y** to send the first one.
-4. Open **Historique** to see transmitted messages and reuse their text.
+3. Click **Send** on a particular prompt, or press **Cmd+Y** to send the first one.
+4. Open **History** to see transmitted messages and **Reuse** their text.
 
-The interface currently uses French labels. **Ajouter à la liste** means “Add to queue,”
-**Envoyer** means “Send,” and **Historique** means “History.” It follows your terminal's
-background, text colors, and ANSI palette.
+The interface follows your terminal's background, text colors, and ANSI palette.
 
 ### Keyboard shortcuts
 
@@ -188,7 +193,8 @@ Tests cover persistence, agent identity changes, duplicate sends, connection fai
 uncertain delivery, agent discovery, keyboard shortcuts, native rendering, and installation
 without Python or a compiler. Transport tests use real Unix `socketpair` streams and do not
 contact your agents. Storage tests include the Python version's SQLite schema and keys.
-The [manual test checklist](docs/TESTING.md) is available in French.
+The [manual test checklist](docs/TESTING.md) is still in French and refers to the
+original French labels.
 
 Native CI tests and builds macOS Apple Silicon, macOS Intel, Linux x86-64, and Linux ARM64.
 Version tags produce release archives and SHA-256 checksums for each platform.
