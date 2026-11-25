@@ -216,7 +216,7 @@ impl QueueView {
             selected: 0,
             scroll: 0,
             editor_focus: true,
-            status: "Connexion…".into(),
+            status: "Connecting…".into(),
             notice: String::new(),
             hits: Vec::new(),
             editor_area: Rect::default(),
@@ -462,7 +462,7 @@ impl QueueView {
                     .chars()
                     .any(|character| terminal_control(character) && character != '\r')
                 {
-                    self.notify("Collage refusé : caractère de contrôle du terminal.");
+                    self.notify("Paste rejected: terminal control character.");
                     return None;
                 }
                 self.dirty |= edit_input(&mut self.editor, Event::Paste(text));
@@ -479,24 +479,24 @@ fn native_style() -> Style {
 
 fn status_label(status: &str) -> &str {
     match status {
-        "working" => "En cours",
-        "idle" | "done" => "Disponible",
-        "blocked" => "Réponse attendue dans le terminal",
-        _ => "État inconnu",
+        "working" => "Working",
+        "idle" | "done" => "Available",
+        "blocked" => "Waiting for a reply in the terminal",
+        _ => "Unknown status",
     }
 }
 
 fn draft_label(draft: &Draft, editing: bool) -> &str {
     if editing {
-        return "En cours de modification";
+        return "Being edited";
     }
     match draft.state.as_str() {
-        "draft" => "Prêt",
-        "sending" => "Envoi en cours…",
-        "sent" => "Transmis au terminal",
-        "error" => "À réessayer",
-        "uncertain" => "Envoi à vérifier",
-        _ => "État inconnu",
+        "draft" => "Ready",
+        "sending" => "Sending…",
+        "sent" => "Sent to terminal",
+        "error" => "Retry",
+        "uncertain" => "Check delivery",
+        _ => "Unknown status",
     }
 }
 
@@ -533,29 +533,25 @@ fn card_actions(
     let id = &draft.id;
     match draft.state.as_str() {
         "draft" | "error" => vec![
-            ("Envoyer", QueueAction::Send(id.clone()), !busy && !editing),
-            ("Modifier", QueueAction::Edit(id.clone()), !busy && !editing),
+            ("Send", QueueAction::Send(id.clone()), !busy && !editing),
+            ("Edit", QueueAction::Edit(id.clone()), !busy && !editing),
             ("↑", QueueAction::Move(id.clone(), -1), !busy),
             ("↓", QueueAction::Move(id.clone(), 1), !busy),
-            (
-                "Supprimer",
-                QueueAction::Delete(id.clone()),
-                !busy && !editing,
-            ),
+            ("Delete", QueueAction::Delete(id.clone()), !busy && !editing),
         ],
         "uncertain" => vec![
             (
-                "Remettre en brouillon",
+                "Back to draft",
                 QueueAction::Resolve(id.clone(), false),
                 !busy,
             ),
             (
-                "Déjà transmis",
+                "Already sent",
                 QueueAction::Resolve(id.clone(), true),
                 !busy,
             ),
         ],
-        "sent" => vec![("Reprendre", QueueAction::Reuse(id.clone()), !busy)],
+        "sent" => vec![("Reuse", QueueAction::Reuse(id.clone()), !busy)],
         _ => Vec::new(),
     }
 }
@@ -611,10 +607,10 @@ fn draw_actions(
 
 fn confirmation_text(action: &QueueAction) -> &'static str {
     match action {
-        QueueAction::Delete(_) => "Supprimer ce brouillon ?",
-        QueueAction::Resolve(_, false) => "Vérifiez le terminal : ce message n'a pas été transmis ?\nConfirmer le remet en brouillon, sans l'envoyer.",
-        QueueAction::Resolve(_, true) => "Vous avez retrouvé ce message dans le terminal ?\nConfirmer le classe dans l'historique.",
-        _ => "Effacer le texte en cours pour préparer un nouveau message ?",
+        QueueAction::Delete(_) => "Delete this draft?",
+        QueueAction::Resolve(_, false) => "Check the terminal: was this message not delivered?\nConfirming moves it back to draft without sending.",
+        QueueAction::Resolve(_, true) => "Did you find this message in the terminal?\nConfirming files it under History.",
+        _ => "Clear the current text to start a new message?",
     }
 }
 
@@ -624,7 +620,7 @@ fn draw_queue(frame: &mut Frame, view: &mut QueueView, target: &Target) {
     view.hits.clear();
     if area.width < 20 || area.height < 13 {
         frame.render_widget(
-            Paragraph::new("Brouillons\nAgrandissez le terminal.\n⌘L / Ctrl+Q : fermer")
+            Paragraph::new("Drafts\nEnlarge the terminal.\n⌘L / Ctrl+Q: close")
                 .style(native_style())
                 .wrap(Wrap { trim: false }),
             area,
@@ -647,7 +643,7 @@ fn draw_queue(frame: &mut Frame, view: &mut QueueView, target: &Target) {
     ])
     .split(area);
     frame.render_widget(
-        Paragraph::new("Brouillons").style(native_style().add_modifier(Modifier::BOLD)),
+        Paragraph::new("Drafts").style(native_style().add_modifier(Modifier::BOLD)),
         chunks[0],
     );
     let destination = if view.allow_switch {
@@ -688,9 +684,9 @@ fn draw_queue(frame: &mut Frame, view: &mut QueueView, target: &Target) {
         chunks[3],
     );
     let title = if view.editing_id.is_some() {
-        "Modifier le message"
+        "Edit message"
     } else {
-        "Écrire un message"
+        "Write a message"
     };
     view.editor.set_block(
         Block::default()
@@ -710,7 +706,7 @@ fn draw_queue(frame: &mut Frame, view: &mut QueueView, target: &Target) {
         native_style()
     });
     view.editor
-        .set_placeholder_text("Préparez votre prochain message…");
+        .set_placeholder_text("Prepare your next message…");
     view.editor
         .set_placeholder_style(native_style().fg(Color::DarkGray));
     view.editor_area = chunks[4];
@@ -723,21 +719,21 @@ fn draw_queue(frame: &mut Frame, view: &mut QueueView, target: &Target) {
         &[
             (
                 if view.editing_id.is_some() {
-                    "Enregistrer"
+                    "Save"
                 } else {
-                    "Ajouter"
+                    "Add"
                 },
                 QueueAction::Save,
                 can_save,
             ),
-            ("Nouveau", QueueAction::New, true),
+            ("New", QueueAction::New, true),
         ],
         view.focus_button.as_ref(),
     );
     let hint = if view.body().is_empty() {
-        "Entrée : ajouter · Maj+Entrée : ligne".into()
+        "Enter: add · Shift+Enter: new line".into()
     } else {
-        format!("{} / 65 536 octets · sauvegardé", view.body().len())
+        format!("{} / 65,536 bytes · saved", view.body().len())
     };
     frame.render_widget(
         Paragraph::new(hint).style(native_style().fg(Color::DarkGray)),
@@ -745,22 +741,14 @@ fn draw_queue(frame: &mut Frame, view: &mut QueueView, target: &Target) {
     );
     let title = format!(
         "{} ({})",
-        if view.history {
-            "Transmis"
-        } else {
-            "À envoyer"
-        },
+        if view.history { "Sent" } else { "To send" },
         view.drafts.len()
     );
     frame.render_widget(
         Paragraph::new(title).style(native_style().add_modifier(Modifier::BOLD)),
         chunks[7],
     );
-    let history_label = if view.history {
-        "Brouillons"
-    } else {
-        "Historique"
-    };
+    let history_label = if view.history { "Drafts" } else { "History" };
     let width = history_label.len() as u16 + 2;
     draw_button(
         frame,
@@ -782,9 +770,9 @@ fn draw_queue(frame: &mut Frame, view: &mut QueueView, target: &Target) {
     if view.drafts.is_empty() {
         frame.render_widget(
             Paragraph::new(if view.history {
-                "Les messages transmis apparaîtront ici."
+                "Sent messages will appear here."
             } else {
-                "Votre liste est vide.\nÉcrivez un message, puis ajoutez-le."
+                "Your list is empty.\nWrite a message, then add it."
             })
             .style(native_style().fg(Color::DarkGray))
             .wrap(Wrap { trim: false }),
@@ -863,9 +851,9 @@ fn draw_queue(frame: &mut Frame, view: &mut QueueView, target: &Target) {
         chunks[9],
     );
     let footer = if cfg!(target_os = "macos") {
-        "⌘U Ajouter  ⌘Y Suivant  ⌘L Fermer\nTab : liste · ↑↓ · Entrée · e : modifier"
+        "⌘U Add  ⌘Y Next  ⌘L Close\nTab: list · ↑↓ · Enter · e: edit"
     } else {
-        "F2 Ajouter  F8 Suivant  F10 Fermer\nTab : liste · ↑↓ · Entrée · e : modifier"
+        "F2 Add  F8 Next  F10 Close\nTab: list · ↑↓ · Enter · e: edit"
     };
     frame.render_widget(
         Paragraph::new(footer).style(native_style().fg(Color::DarkGray)),
@@ -905,7 +893,7 @@ fn draw_queue(frame: &mut Frame, view: &mut QueueView, target: &Target) {
             frame,
             &mut view.hits,
             Rect::new(popup.x + 1, popup.bottom().saturating_sub(2), 9, 1),
-            "Annuler",
+            "Cancel",
             QueueAction::Confirm(false),
             true,
             !view.confirm_yes,
@@ -919,7 +907,7 @@ fn draw_queue(frame: &mut Frame, view: &mut QueueView, target: &Target) {
                 popup.width.saturating_sub(12).min(11),
                 1,
             ),
-            "Confirmer",
+            "Confirm",
             QueueAction::Confirm(true),
             true,
             view.confirm_yes,
@@ -935,9 +923,7 @@ extern "C" fn interrupt_terminal(_signal: libc::c_int) {
 
 fn interrupted_error() -> Error {
     Error {
-        message:
-            "Interface interrompue. Les textes sont conservés ; vérifiez tout envoi interrompu."
-                .into(),
+        message: "Interface interrupted. Your text is kept; check any interrupted send.".into(),
         code: "interrupted".into(),
         uncertain: false,
     }
@@ -1091,7 +1077,7 @@ pub fn run_queue(
             if let Err(save_error) = app.persist() {
                 error
                     .message
-                    .push_str(&format!(" Sauvegarde finale impossible : {save_error}."));
+                    .push_str(&format!(" Final save failed: {save_error}."));
             }
             return Err(error);
         }
@@ -1109,7 +1095,7 @@ pub fn run_queue(
                 Err(mpsc::TryRecvError::Disconnected) => {
                     app.service.store.recover_inflight(&app.service.target)?;
                     return Err(Error::new(
-                        "La requête a été interrompue. Vérifiez le terminal avant de réessayer.",
+                        "The request was interrupted. Check the terminal before retrying.",
                     ));
                 }
                 Err(mpsc::TryRecvError::Empty) => {}
@@ -1133,9 +1119,8 @@ pub fn run_queue(
         let action = app.view.event(event);
         if app.view.body() != before {
             if let Err(error) = app.persist() {
-                app.view.notify(format!(
-                    "Sauvegarde impossible : {error}. Gardez ce panneau ouvert."
-                ));
+                app.view
+                    .notify(format!("Save failed: {error}. Keep this panel open."));
             }
         }
         if let Some(action) = action {
@@ -1213,7 +1198,7 @@ pub fn pick_agent(
                     worker = None;
                     view.inventory(
                         Vec::new(),
-                        vec!["Recherche interrompue. Actualisez pour réessayer.".into()],
+                        vec!["Search interrupted. Refresh to retry.".into()],
                     );
                 }
                 Err(mpsc::TryRecvError::Empty) => {}
@@ -1346,7 +1331,7 @@ impl QueueApp {
                 });
                 let status = match result {
                     Ok(agent) if agent.target.socket_path == "/demo" => {
-                        "Démo : les envois sont simulés".into()
+                        "Demo: sends are simulated".into()
                     }
                     Ok(agent) => status_label(&agent.status).into(),
                     Err(error) => error.to_string(),
@@ -1360,14 +1345,14 @@ impl QueueApp {
                 self.service.verify_target(&target)?;
                 match result {
                     Ok(draft) if draft.state == "sent" => {
-                        self.view.notify("Message transmis au terminal.")
+                        self.view.notify("Message sent to terminal.")
                     }
                     Ok(draft) if draft.state == "uncertain" => self
                         .view
-                        .notify("Envoi à vérifier dans le terminal. Aucun renvoi automatique."),
+                        .notify("Check the terminal for this send. No automatic resend."),
                     Ok(draft) => self
                         .view
-                        .notify(draft.error.unwrap_or_else(|| "Message conservé.".into())),
+                        .notify(draft.error.unwrap_or_else(|| "Message kept.".into())),
                     Err(error) => self.view.notify(error.to_string()),
                 }
             }
@@ -1420,7 +1405,7 @@ impl QueueApp {
                 self.service.save()?;
                 self.view.set_composer("", None);
                 self.view.history = false;
-                self.view.notify("Message ajouté à la liste.");
+                self.view.notify("Message added to the list.");
                 self.reload()?;
             }
             QueueAction::New if !confirmed && !self.view.body().is_empty() => {
@@ -1448,15 +1433,14 @@ impl QueueApp {
                 if self.view.editing_id.as_deref() == Some(id.as_str())
                     || !matches!(draft.state.as_str(), "draft" | "error")
                 {
-                    self.view.notify(
-                        "Enregistrez la modification ou vérifiez cet envoi avant de continuer.",
-                    );
+                    self.view
+                        .notify("Save your edit or check this send before continuing.");
                     return Ok(QueueOutcome::Continue);
                 }
                 self.persist()?;
                 self.view.busy = true;
                 self.view.dirty = true;
-                self.view.notify("Envoi en cours…");
+                self.view.notify("Sending…");
                 return Ok(QueueOutcome::Send(id));
             }
             QueueAction::Edit(id) | QueueAction::Reuse(id) => {
@@ -1464,8 +1448,7 @@ impl QueueApp {
                     return Ok(QueueOutcome::Continue);
                 }
                 if !self.view.body().is_empty() {
-                    self.view
-                        .notify("Ajoutez ou terminez d'abord le message en cours.");
+                    self.view.notify("Add or finish the current message first.");
                     return Ok(QueueOutcome::Continue);
                 }
                 let draft = self.service.store.get(&id)?;
@@ -1488,9 +1471,8 @@ impl QueueApp {
             action @ (QueueAction::Delete(_) | QueueAction::Resolve(_, _)) if !self.view.busy => {
                 if let QueueAction::Delete(id) = &action {
                     if self.view.editing_id.as_deref() == Some(id.as_str()) {
-                        self.view.notify(
-                            "Enregistrez ou terminez d'abord la modification de ce message.",
-                        );
+                        self.view
+                            .notify("Save or finish editing this message first.");
                         return Ok(QueueOutcome::Continue);
                     }
                 }
@@ -1519,7 +1501,7 @@ impl QueueApp {
             QueueAction::Quit | QueueAction::Agents => {
                 if self.view.busy {
                     self.view.notify(
-                        "Attendez la confirmation de l'envoi avant de fermer ou changer d'agent.",
+                        "Wait for the send to be confirmed before closing or switching agents.",
                     );
                 } else {
                     self.persist()?;
@@ -1741,8 +1723,7 @@ impl PickerView {
                     .chars()
                     .any(|character| terminal_control(character) && character != '\r')
                 {
-                    self.errors =
-                        vec!["Collage refusé : caractère de contrôle du terminal.".into()];
+                    self.errors = vec!["Paste rejected: terminal control character.".into()];
                     self.dirty = true;
                     return None;
                 }
@@ -1788,7 +1769,7 @@ fn draw_picker(frame: &mut Frame, view: &mut PickerView) {
     view.hits.clear();
     if area.width < 20 || area.height < 13 {
         frame.render_widget(
-            Paragraph::new("Agents Herdr\nAgrandissez le terminal.\nÉchap : fermer")
+            Paragraph::new("Herdr agents\nEnlarge the terminal.\nEsc: close")
                 .style(native_style())
                 .wrap(Wrap { trim: false }),
             area,
@@ -1808,11 +1789,11 @@ fn draw_picker(frame: &mut Frame, view: &mut PickerView) {
     ])
     .split(area);
     frame.render_widget(
-        Paragraph::new("Agents Herdr").style(native_style().add_modifier(Modifier::BOLD)),
+        Paragraph::new("Herdr agents").style(native_style().add_modifier(Modifier::BOLD)),
         chunks[0],
     );
     frame.render_widget(
-        Paragraph::new("Choisissez un agent pour ses messages.").style(native_style()),
+        Paragraph::new("Choose an agent to queue messages for.").style(native_style()),
         chunks[1],
     );
     frame.render_widget(
@@ -1822,7 +1803,7 @@ fn draw_picker(frame: &mut Frame, view: &mut PickerView) {
     view.search.set_block(
         Block::default()
             .borders(Borders::ALL)
-            .title("Rechercher projet, nom ou agent")
+            .title("Search project, name or agent")
             .border_style(native_style().fg(if view.search_focus {
                 Color::Cyan
             } else {
@@ -1839,15 +1820,15 @@ fn draw_picker(frame: &mut Frame, view: &mut PickerView) {
     view.search_area = chunks[3];
     frame.render_widget(&view.search, chunks[3]);
     let status = if view.loading {
-        "Recherche des agents…".into()
+        "Searching for agents…".into()
     } else if !view.visible.is_empty() {
-        format!("{} agent(s) · Cliquez ou Entrée", view.visible.len())
+        format!("{} agent(s) · Click or press Enter", view.visible.len())
     } else if !view.agents.is_empty() {
-        "Aucun agent ne correspond.".into()
+        "No matching agents.".into()
     } else if !view.errors.is_empty() {
-        "Connexion à Herdr impossible.".into()
+        "Cannot connect to Herdr.".into()
     } else {
-        "Aucun agent. Lancez-le puis actualisez.".into()
+        "No agents. Start one, then refresh.".into()
     };
     frame.render_widget(
         Paragraph::new(status).style(native_style().fg(Color::DarkGray)),
@@ -1920,7 +1901,7 @@ fn draw_picker(frame: &mut Frame, view: &mut PickerView) {
     frame.render_widget(
         Paragraph::new(Line::from(vec![
             ratatui::text::Span::styled(
-                "[Ouvrir]",
+                "[Open]",
                 native_style().fg(Color::Cyan).add_modifier(
                     if matches!(view.focus_button, Some(PickerAction::Choose(_))) {
                         Modifier::BOLD
@@ -1931,7 +1912,7 @@ fn draw_picker(frame: &mut Frame, view: &mut PickerView) {
             ),
             ratatui::text::Span::raw("  "),
             ratatui::text::Span::styled(
-                "[Actualiser]",
+                "[Refresh]",
                 native_style().fg(Color::Cyan).add_modifier(
                     if view.focus_button == Some(PickerAction::Refresh) {
                         Modifier::BOLD
@@ -1956,9 +1937,9 @@ fn draw_picker(frame: &mut Frame, view: &mut PickerView) {
     }
     frame.render_widget(
         Paragraph::new(if cfg!(target_os = "macos") {
-            "⌘R Actualiser · ⌘L Fermer · ↑↓ Entrée"
+            "⌘R Refresh · ⌘L Close · ↑↓ Enter"
         } else {
-            "F5 Actualiser · Échap Fermer · ↑↓ Entrée"
+            "F5 Refresh · Esc Close · ↑↓ Enter"
         })
         .style(native_style().fg(Color::DarkGray)),
         chunks[8],
@@ -2124,13 +2105,13 @@ mod tests {
                 .iter()
                 .map(|cell| cell.symbol())
                 .collect::<String>();
-            assert!(text.contains("Brouillons"), "{width}×{height}: {text}");
+            assert!(text.contains("Drafts"), "{width}×{height}: {text}");
             assert!(buffer
                 .content
                 .iter()
                 .all(|cell| cell.bg == ratatui::style::Color::Reset));
             if width >= 36 {
-                assert!(text.contains("Envoyer"));
+                assert!(text.contains("Send"));
                 assert!(text.contains("café"));
             }
         }

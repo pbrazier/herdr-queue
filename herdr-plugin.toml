@@ -1,6 +1,6 @@
 id = "herdr-drafts"
 name = "Herdr Queue"
-version = "0.2.0"
+version = "0.2.1"
 description = "Draft, queue, and send prompts to your AI coding agents from a dedicated terminal panel."
 min_herdr_version = "0.9.3"
 platforms = ["macos", "linux"]
@@ -10,12 +10,12 @@ command = ["sh", "install.sh"]
 
 [[actions]]
 id = "open"
-title = "Ouvrir les brouillons"
+title = "Open drafts"
 contexts = ["pane"]
 command = ["sh", "run.sh", "open"]
 
 [[panes]]
 id = "drafts"
-title = "Brouillons"
+title = "Drafts"
 placement = "split"
 command = ["sh", "run.sh", "tui"]

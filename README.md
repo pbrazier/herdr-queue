@@ -16,7 +16,7 @@ You need **Herdr 0.9.3+**, on **macOS or Linux** (Apple Silicon, Intel, or Linux
 Queue is a native Rust executable. **Python, uv, and a Rust installation are not required.**
 
 ```sh
-herdr plugin install Wormav/herdr-queue
+herdr plugin install pbrazier/herdr-queue
 ```
 
 Herdr downloads the repository, then the installer downloads the matching native executable
@@ -60,14 +60,14 @@ before switching to the GitHub installation. Herdr will not install over a local
 ## Use it from another terminal
 
 ```sh
-git clone https://github.com/Wormav/herdr-queue.git
+git clone https://github.com/pbrazier/herdr-queue.git
 cd herdr-queue
 ./run.sh
 ```
 
 The launcher downloads and verifies the native executable on the first run. Herdr must be
 running, and its CLI must be available in your `PATH`. A standalone executable is also
-available in [Releases](https://github.com/Wormav/herdr-queue/releases).
+available in [Releases](https://github.com/pbrazier/herdr-queue/releases).
 
 Search for an agent by project, name, or type, then select it with a click or **Enter**.
 Its queue opens in the terminal where you launched the app. Use **Agents** or **Cmd+O**
@@ -172,7 +172,7 @@ For a local version and storage diagnostic, run `./run.sh doctor` from a checkou
 ## Development
 
 ```sh
-git clone https://github.com/Wormav/herdr-queue.git
+git clone https://github.com/pbrazier/herdr-queue.git
 cd herdr-queue
 cargo test --locked
 cargo fmt --check

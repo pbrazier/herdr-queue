@@ -39,14 +39,14 @@ pub fn parse_args(arguments: &[String]) -> Result<Command> {
                 let value = arguments
                     .next()
                     .filter(|value| !value.starts_with('-'))
-                    .ok_or_else(|| Error::new(format!("Valeur manquante pour {argument}.")))?;
+                    .ok_or_else(|| Error::new(format!("Missing value for {argument}.")))?;
                 let option = if argument == "--session" {
                     &mut session
                 } else {
                     &mut socket
                 };
                 if option.replace(value.clone()).is_some() {
-                    return Err(Error::new(format!("Option répétée : {argument}.")));
+                    return Err(Error::new(format!("Repeated option: {argument}.")));
                 }
             }
             "connect" | "open" | "tui" | "demo" | "doctor" if name.is_none() => {
@@ -54,7 +54,7 @@ pub fn parse_args(arguments: &[String]) -> Result<Command> {
             }
             _ => {
                 return Err(Error::new(format!(
-                    "Argument inconnu : {argument}. Utilisez --help."
+                    "Unknown argument: {argument}. Use --help."
                 )))
             }
         }
@@ -63,9 +63,7 @@ pub fn parse_args(arguments: &[String]) -> Result<Command> {
     if (session.is_some() && socket.is_some())
         || (name != "connect" && (session.is_some() || socket.is_some()))
     {
-        return Err(Error::new(
-            "Utilisez --session ou --socket uniquement avec connect.",
-        ));
+        return Err(Error::new("Use --session or --socket only with connect."));
     }
     Ok(match name {
         "open" => Command::Open,
@@ -79,7 +77,7 @@ pub fn parse_args(arguments: &[String]) -> Result<Command> {
 pub fn source_pane(environment: &HashMap<String, String>) -> Result<String> {
     if environment.get("HERDR_ENV").map(String::as_str) != Some("1") {
         return Err(Error::new(
-            "Ouvrez ce panneau depuis un agent dans Herdr, ou utilisez « demo ».",
+            "Open this panel from an agent in Herdr, or use “demo”.",
         ));
     }
     if let Some(raw) = environment
@@ -88,7 +86,7 @@ pub fn source_pane(environment: &HashMap<String, String>) -> Result<String> {
     {
         let context: Value = serde_json::from_str(raw)?;
         if !context.is_object() {
-            return Err(Error::new("Contexte du plugin invalide."));
+            return Err(Error::new("Invalid plugin context."));
         }
         if let Some(pane) = context
             .get("focused_pane_id")
@@ -102,7 +100,7 @@ pub fn source_pane(environment: &HashMap<String, String>) -> Result<String> {
         .get("HERDR_PANE_ID")
         .filter(|value| !value.is_empty())
         .cloned()
-        .ok_or_else(|| Error::new("Le panneau source Herdr n'est pas identifié."))
+        .ok_or_else(|| Error::new("The source Herdr pane is not identified."))
 }
 
 fn expand_home(path: &str, environment: &HashMap<String, String>) -> PathBuf {
@@ -140,7 +138,7 @@ pub fn open_panel(client: &HerdrClient, source: &str) -> Result<String> {
     let pane = info
         .get("pane")
         .filter(|value| value.is_object())
-        .ok_or_else(|| Error::new("Panneau Herdr invalide."))?;
+        .ok_or_else(|| Error::new("Invalid Herdr pane."))?;
     if pane["tokens"]["drafts_owner"]
         .as_str()
         .is_some_and(|value| !value.is_empty())
@@ -153,17 +151,19 @@ pub fn open_panel(client: &HerdrClient, source: &str) -> Result<String> {
     let panes = result
         .get("panes")
         .and_then(Value::as_array)
-        .ok_or_else(|| Error::new("Liste de panneaux Herdr invalide."))?;
+        .ok_or_else(|| Error::new("Invalid Herdr pane list."))?;
     for pane in panes {
         if pane["tokens"]["drafts_owner"].as_str() == Some(&target.lock_key()) {
             if pane["tokens"]["drafts_target"].as_str() != Some(&target.key()) {
-                return Err(Error::new("Un panneau est lié à une autre conversation. Fermez-le, puis rouvrez les brouillons."));
+                return Err(Error::new(
+                    "A panel is bound to another conversation. Close it, then reopen the drafts.",
+                ));
             }
             let id = pane
                 .get("pane_id")
                 .and_then(Value::as_str)
                 .filter(|id| !id.is_empty())
-                .ok_or_else(|| Error::new("Identifiant de panneau manquant."))?;
+                .ok_or_else(|| Error::new("Missing pane ID."))?;
             client.request("plugin.pane.focus", json!({"pane_id": id}))?;
             return Ok(id.to_owned());
         }
@@ -180,7 +180,7 @@ pub fn open_panel(client: &HerdrClient, source: &str) -> Result<String> {
         .as_str()
         .filter(|id| !id.is_empty())
         .map(str::to_owned)
-        .ok_or_else(|| Error::new("Le nouveau panneau Herdr n'est pas identifié."))
+        .ok_or_else(|| Error::new("The new Herdr pane is not identified."))
 }
 
 fn run_drafts(
@@ -214,13 +214,13 @@ fn run_demo() -> Result<()> {
         terminal_id: "demo-terminal".into(),
         workspace_id: "demo".into(),
         agent: "codex".into(),
-        cwd: "~/mon-projet".into(),
+        cwd: "~/my-project".into(),
         session: Some("demo".into()),
     };
     let store = DraftStore::open(&directory.0.join("drafts.sqlite3"))?;
     for body in [
-        "Quand les tests seront terminés, vérifie aussi le comportement sur mobile.",
-        "Prépare un résumé des changements\net des points à tester ensemble.",
+        "When the tests finish, also check the behaviour on mobile.",
+        "Prepare a summary of the changes\nand the points to test together.",
     ] {
         store.save_composer(&target, body, None)?;
         store.commit_composer(&target)?;
@@ -244,21 +244,21 @@ fn doctor(environment: &HashMap<String, String>) -> Result<()> {
         if Instant::now() >= deadline {
             let _ = child.kill();
             let _ = child.wait();
-            return Err(Error::new("Herdr ne répond pas."));
+            return Err(Error::new("Herdr is not responding."));
         }
         std::thread::sleep(Duration::from_millis(10));
     }
     let output = child.wait_with_output()?;
     if !output.status.success() {
-        return Err(Error::new("Herdr n'a pas pu communiquer sa version."));
+        return Err(Error::new("Herdr could not report its version."));
     }
     println!(
-        "Herdr Queue {} (Rust natif)\n{}",
+        "Herdr Queue {} (native Rust)\n{}",
         env!("CARGO_PKG_VERSION"),
         String::from_utf8_lossy(&output.stdout).trim()
     );
     println!(
-        "Contexte Herdr : {}",
+        "Herdr context: {}",
         if environment.get("HERDR_ENV").map(String::as_str) == Some("1") {
             "oui"
         } else {
@@ -266,7 +266,7 @@ fn doctor(environment: &HashMap<String, String>) -> Result<()> {
         }
     );
     println!(
-        "Données locales : {}\nDiagnostic local uniquement ; aucun message envoyé.",
+        "Local data: {}\nLocal diagnostic only; no message sent.",
         state_directory(environment).display()
     );
     Ok(())
@@ -291,18 +291,18 @@ fn run_terminal(
 pub fn execute(command: Command, environment: &HashMap<String, String>) -> Result<()> {
     match command {
         Command::Version => println!("Herdr Queue {}", env!("CARGO_PKG_VERSION")),
-        Command::Help => println!("Herdr Queue — préparez plusieurs messages pour votre agent Herdr.\n\nUsage : herdr-queue [connect|open|tui|demo|doctor] [--session NOM | --socket CHEMIN]\n\nconnect : choisir un agent depuis ce terminal (par défaut)\nopen    : ouvrir le panneau à droite de l'agent Herdr actif\ntui     : panneau intégré, lancé par Herdr\ndemo    : démonstration isolée, aucun message réel\ndoctor  : version, contexte et stockage\n\n--version / --help"),
+        Command::Help => println!("Herdr Queue — prepare several messages for your Herdr agent.\n\nUsage: herdr-queue [connect|open|tui|demo|doctor] [--session NAME | --socket PATH]\n\nconnect: pick an agent from this terminal (default)\nopen   : open the panel to the right of the active Herdr agent\ntui    : embedded panel, launched by Herdr\ndemo   : isolated demonstration, no real messages\ndoctor : version, context and storage\n\n--version / --help"),
         Command::Doctor => doctor(environment)?,
         Command::Demo => run_demo()?,
         Command::Open => {
             let source = source_pane(environment)?;
-            let socket = environment.get("HERDR_SOCKET_PATH").ok_or_else(|| Error::new("Le contexte Herdr ne fournit pas de socket."))?;
-            println!("Brouillons ouverts : {}", open_panel(&HerdrClient::new(socket.clone()), &source)?);
+            let socket = environment.get("HERDR_SOCKET_PATH").ok_or_else(|| Error::new("The Herdr context provides no socket."))?;
+            println!("Drafts opened: {}", open_panel(&HerdrClient::new(socket.clone()), &source)?);
         }
         Command::Tui => {
-            let raw = environment.get("HERDR_DRAFTS_TARGET").ok_or_else(|| Error::new("Destination manquante. Lancez « Ouvrir les brouillons » dans Herdr."))?;
+            let raw = environment.get("HERDR_DRAFTS_TARGET").ok_or_else(|| Error::new("Missing destination. Run “Open drafts” in Herdr."))?;
             let target = Target::from_json(raw)?;
-            if environment.get("HERDR_SOCKET_PATH") != Some(&target.socket_path) { return Err(Error::new("Le socket Herdr ne correspond pas à la destination enregistrée.")); }
+            if environment.get("HERDR_SOCKET_PATH") != Some(&target.socket_path) { return Err(Error::new("The Herdr socket does not match the saved destination.")); }
             let panel = environment.get("HERDR_PANE_ID").cloned();
             let client = HerdrClient::new(target.socket_path.clone());
             run_drafts(client.clone(), target.clone(), &state_directory(environment), panel.clone(), false)?;

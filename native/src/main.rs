@@ -8,7 +8,7 @@ fn main() {
         .map(|value| {
             value
                 .into_string()
-                .map_err(|_| Error::new("Les arguments doivent être du texte UTF-8."))
+                .map_err(|_| Error::new("Arguments must be UTF-8 text."))
         })
         .collect::<Result<Vec<_>, _>>();
     let environment: HashMap<_, _> = std::env::vars_os()

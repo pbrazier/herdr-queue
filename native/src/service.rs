@@ -55,7 +55,7 @@ impl DraftService {
             bound.cwd.as_str(),
         ) || (bound.session.is_some() && current.session != bound.session)
         {
-            return Err(Error::new("La conversation cible a changé. Fermez ce panneau (Ctrl+Q), puis rouvrez-le depuis l'agent souhaité."));
+            return Err(Error::new("The target conversation changed. Close this panel (Ctrl+Q), then reopen it from the agent you want."));
         }
         if bound.session.is_none() && current.session.is_some() {
             self.store.adopt_session(bound, current)?;
@@ -71,7 +71,7 @@ impl DraftService {
     pub fn send(&mut self, id: &str) -> Result<Draft> {
         let draft = self.store.get(id)?;
         if draft.target_key != self.target.key() {
-            return Err(Error::new("Ce message appartient à un autre agent."));
+            return Err(Error::new("This message belongs to another agent."));
         }
         validate_prompt(&draft.body)?;
         self.store.claim(id)?;
@@ -79,9 +79,9 @@ impl DraftService {
             let live = self.refresh()?;
             if !matches!(live.status.as_str(), "idle" | "done" | "working") {
                 return Err(Error::new(if live.status == "blocked" {
-                    "L'agent attend une réponse interactive."
+                    "The agent is waiting for an interactive reply."
                 } else {
-                    "L'état de l'agent est inconnu. Vérifiez son terminal."
+                    "The agent's status is unknown. Check its terminal."
                 }));
             }
             self.client.prompt(&self.target.pane_id, &draft.body)
@@ -104,11 +104,11 @@ impl DraftService {
 
 pub fn validate_prompt(body: &str) -> Result<()> {
     if body.trim().is_empty() {
-        return Err(Error::new("Écrivez un message avant de l'ajouter."));
+        return Err(Error::new("Write a message before adding it."));
     }
     if body.len() > MAX_PROMPT_BYTES {
         return Err(Error::new(
-            "Le message dépasse 64 Kio. Divisez-le en plusieurs messages.",
+            "The message exceeds 64 KiB. Split it into several messages.",
         ));
     }
     if body.chars().any(|character| {
@@ -116,7 +116,7 @@ pub fn validate_prompt(body: &str) -> Result<()> {
             || ('\u{7f}'..='\u{9f}').contains(&character)
     }) {
         return Err(Error::new(
-            "Le message contient un caractère de contrôle du terminal.",
+            "The message contains a terminal control character.",
         ));
     }
     Ok(())

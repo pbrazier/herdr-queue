@@ -1,11 +1,11 @@
 [package]
 name = "herdr-queue"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 rust-version = "1.88"
 description = "Draft, queue, and send prompts to your AI coding agents from a dedicated terminal panel."
 license = "MIT"
-repository = "https://github.com/Wormav/herdr-queue"
+repository = "https://github.com/pbrazier/herdr-queue"
 
 [lib]
 name = "herdr_queue"

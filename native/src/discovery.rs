@@ -45,9 +45,9 @@ pub fn discover_sessions(
         .spawn()
         .map_err(|error| {
             Error::new(if error.kind() == io::ErrorKind::NotFound {
-                "Herdr est introuvable. Vérifiez qu'il est installé dans votre PATH."
+                "Herdr not found. Check that it is installed in your PATH."
             } else {
-                "Impossible de lire les sessions Herdr. Vérifiez que Herdr fonctionne."
+                "Cannot read Herdr sessions. Check that Herdr is running."
             })
         })?;
     let output = bounded_output(child, Duration::from_secs(5))?;
@@ -91,7 +91,7 @@ fn bounded_output(mut child: Child, timeout: Duration) -> Result<Vec<u8>> {
         let mut closed = false;
         loop {
             if Instant::now() >= deadline {
-                return Err(Error::new("Herdr ne répond pas. Réessayez avec Ctrl+R."));
+                return Err(Error::new("Herdr is not responding. Retry with Ctrl+R."));
             }
             let mut chunk = [0; 8192];
             if !closed {
@@ -115,7 +115,7 @@ fn bounded_output(mut child: Child, timeout: Duration) -> Result<Vec<u8>> {
             if let Some(status) = child.try_wait()? {
                 if !status.success() {
                     return Err(Error::new(
-                        "Impossible de lire les sessions Herdr. Vérifiez que Herdr fonctionne.",
+                        "Cannot read Herdr sessions. Check that Herdr is running.",
                     ));
                 }
                 if closed {

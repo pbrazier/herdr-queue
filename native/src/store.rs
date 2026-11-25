@@ -122,7 +122,7 @@ impl DraftStore {
             )?;
             if changed != 1 {
                 return Err(Error::new(
-                    "Ce message a changé. Conservez votre texte avant de continuer.",
+                    "This message changed. Keep your text before continuing.",
                 ));
             }
             id
@@ -181,7 +181,7 @@ impl DraftStore {
         )?;
         if changed != 1 {
             return Err(Error::new(
-                "Ce message est déjà transmis ou en cours d'envoi.",
+                "This message has already been sent or is being sent.",
             ));
         }
         let draft = self.get(id)?;
@@ -198,7 +198,7 @@ impl DraftStore {
             params![state, error, id],
         )?;
         if changed != 1 {
-            return Err(Error::new("L'état de ce message a changé."));
+            return Err(Error::new("This message's status changed."));
         }
         transaction.commit()?;
         Ok(())
@@ -212,7 +212,7 @@ impl DraftStore {
             params![if delivered { "sent" } else { "draft" }, id],
         )?;
         if changed != 1 {
-            return Err(Error::new("Ce message n'attend pas de vérification."));
+            return Err(Error::new("This message is not awaiting verification."));
         }
         transaction.commit()?;
         Ok(())
@@ -224,7 +224,7 @@ impl DraftStore {
         transaction.execute(
             "UPDATE drafts SET state='uncertain',error=?1 WHERE target_key=
              COALESCE((SELECT target_key FROM target_aliases WHERE alias_key=?2), ?2) AND state='sending'",
-            params!["Envoi interrompu. Vérifiez le terminal avant de réessayer.", target.key()],
+            params!["Send interrupted. Check the terminal before retrying.", target.key()],
         )?;
         transaction.commit()?;
         Ok(())
@@ -239,7 +239,7 @@ impl DraftStore {
         )?;
         if changed != 1 {
             return Err(Error::new(
-                "Ce message ne peut pas être supprimé dans son état actuel.",
+                "This message cannot be deleted in its current state.",
             ));
         }
         transaction.commit()?;
@@ -251,7 +251,7 @@ impl DraftStore {
             Transaction::new_unchecked(&self.connection, TransactionBehavior::Immediate)?;
         let draft = self.get(id)?;
         if draft.state != "draft" && draft.state != "error" {
-            return Err(Error::new("Ce message ne peut pas être déplacé."));
+            return Err(Error::new("This message cannot be moved."));
         }
         let rows = {
             let mut statement = transaction.prepare(
@@ -374,7 +374,7 @@ impl PanelLock {
         if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
             let error = std::io::Error::last_os_error();
             if error.kind() == std::io::ErrorKind::WouldBlock {
-                return Err(Error::new("Un panneau est déjà ouvert pour cet agent."));
+                return Err(Error::new("A panel is already open for this agent."));
             }
             return Err(error.into());
         }

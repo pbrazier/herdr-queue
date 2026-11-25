@@ -79,9 +79,7 @@ impl HerdrClient {
     }
     pub fn request(&self, method: &str, params: Value) -> Result<Value> {
         if self.demo_target.is_some() {
-            return Err(Error::new(
-                "Le mode démonstration ne fait aucune requête réseau.",
-            ));
+            return Err(Error::new("Demo mode makes no network requests."));
         }
         let request_id = unique_id();
         let mut payload =
@@ -131,7 +129,7 @@ impl HerdrClient {
                     Err(_) => return Err(transport_error()),
                 };
                 if response.len() + count > MAX_RESPONSE_BYTES {
-                    return Err(invalid_response("Réponse Herdr trop volumineuse."));
+                    return Err(invalid_response("Herdr response too large."));
                 }
                 let previous = response.len();
                 response.extend_from_slice(&chunk[..count]);
@@ -140,10 +138,10 @@ impl HerdrClient {
                 }
             };
             let decoded: Value = serde_json::from_slice(&response[..line_end])
-                .map_err(|_| invalid_response("Format de réponse Herdr invalide."))?;
+                .map_err(|_| invalid_response("Invalid Herdr response format."))?;
             let response = json_object(&decoded)?;
             if response.get("id").and_then(Value::as_str) != Some(request_id.as_str()) {
-                return Err(invalid_response("Identifiant de réponse Herdr inattendu."));
+                return Err(invalid_response("Unexpected Herdr response ID."));
             }
             if let Some(error) = response.get("error") {
                 let error = json_object(error)?;
@@ -192,7 +190,7 @@ impl HerdrClient {
                 "agent",
             ],
         )?
-        .ok_or_else(|| invalid_response("Identité d'agent Herdr invalide."))?;
+        .ok_or_else(|| invalid_response("Invalid Herdr agent identity."))?;
         Ok(Agent {
             target: Target {
                 socket_path: self.socket_path.clone(),
@@ -213,15 +211,15 @@ impl HerdrClient {
     pub fn get_agent(&self, pane: &str) -> Result<Agent> {
         if let Some(target) = &self.demo_target {
             if pane != target.pane_id {
-                return Err(Error::new("Agent de démonstration introuvable."));
+                return Err(Error::new("Demo agent not found."));
             }
             return Ok(Agent {
                 target: target.clone(),
                 status: "idle".into(),
-                name: "Agent de démonstration".into(),
-                workspace_label: "Démonstration".into(),
+                name: "Demo agent".into(),
+                workspace_label: "Demo".into(),
                 tab_label: String::new(),
-                session_label: "Démo".into(),
+                session_label: "Demo".into(),
             });
         }
         let result = self.request("agent.get", json!({"target":pane}))?;
@@ -305,21 +303,21 @@ fn first_identity_string<'a>(
         .map(|value| {
             value
                 .as_str()
-                .ok_or_else(|| invalid_response("Identité d'agent Herdr invalide."))
+                .ok_or_else(|| invalid_response("Invalid Herdr agent identity."))
         })
         .transpose()
 }
 pub(crate) fn json_object(value: &Value) -> Result<&Map<String, Value>> {
     value
         .as_object()
-        .ok_or_else(|| invalid_response("Format de réponse Herdr invalide."))
+        .ok_or_else(|| invalid_response("Invalid Herdr response format."))
 }
 pub(crate) fn required_string<'a>(value: &'a Map<String, Value>, key: &str) -> Result<&'a str> {
     value
         .get(key)
         .and_then(Value::as_str)
         .filter(|value| !value.is_empty())
-        .ok_or_else(|| invalid_response(format!("Champ manquant dans la réponse Herdr : {key}.")))
+        .ok_or_else(|| invalid_response(format!("Missing field in Herdr response: {key}.")))
 }
 fn invalid_response(message: impl Into<String>) -> Error {
     Error {
@@ -330,7 +328,7 @@ fn invalid_response(message: impl Into<String>) -> Error {
 }
 fn transport_error() -> Error {
     Error {
-        message: "Connexion Herdr indisponible ou réponse interrompue.".into(),
+        message: "Herdr connection unavailable or response interrupted.".into(),
         code: "transport".into(),
         uncertain: false,
     }
@@ -339,7 +337,7 @@ fn remaining(deadline: Instant) -> io::Result<Duration> {
     deadline
         .checked_duration_since(Instant::now())
         .filter(|time| !time.is_zero())
-        .ok_or_else(|| io::Error::new(io::ErrorKind::TimedOut, "Herdr n'a pas répondu à temps."))
+        .ok_or_else(|| io::Error::new(io::ErrorKind::TimedOut, "Herdr did not respond in time."))
 }
 
 fn connect_unix(path: &str, deadline: Instant) -> io::Result<UnixStream> {
@@ -424,7 +422,7 @@ fn wait_ready(stream: &UnixStream, events: libc::c_short, deadline: Instant) -> 
         if count == 0 {
             return Err(io::Error::new(
                 io::ErrorKind::TimedOut,
-                "Herdr n'a pas répondu à temps.",
+                "Herdr did not respond in time.",
             ));
         }
         return Ok(());
