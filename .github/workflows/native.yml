@@ -17,7 +17,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-15
+          # Cross-compiled on the Intel runner: GitHub's macOS arm64 pool is
+          # often capacity-constrained and jobs never get a machine.
+          - runner: macos-15-intel
             target: aarch64-apple-darwin
           - runner: macos-15-intel
             target: x86_64-apple-darwin
@@ -35,6 +37,7 @@ jobs:
           rustup update stable --no-self-update
           rustup default stable
           rustup component add rustfmt clippy
+          rustup target add '${{ matrix.target }}'
       - name: Format
         run: cargo fmt --check
       - name: Lint
