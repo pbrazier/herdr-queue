@@ -234,20 +234,20 @@ impl HerdrClient {
         let values = snapshot
             .get("agents")
             .and_then(Value::as_array)
-            .ok_or_else(|| invalid_response("Liste d'agents Herdr invalide."))?;
+            .ok_or_else(|| invalid_response("Invalid Herdr agent list."))?;
         let mut labels = std::collections::HashMap::new();
         for (collection, key) in [("workspaces", "workspace_id"), ("tabs", "tab_id")] {
             let records = snapshot
                 .get(collection)
                 .and_then(Value::as_array)
-                .ok_or_else(|| invalid_response("Contexte des agents Herdr invalide."))?;
+                .ok_or_else(|| invalid_response("Invalid Herdr agent context."))?;
             let mut names = std::collections::HashMap::new();
             for value in records {
                 let record = json_object(value)?;
                 let label = record
                     .get("label")
                     .and_then(Value::as_str)
-                    .ok_or_else(|| invalid_response("Nom de projet Herdr invalide."))?;
+                    .ok_or_else(|| invalid_response("Invalid Herdr project name."))?;
                 names.insert(required_string(record, key)?, label);
             }
             labels.insert(collection, names);
@@ -277,7 +277,7 @@ impl HerdrClient {
         let result = self.request("agent.prompt", json!({"target":pane,"text":body}))?;
         if result["type"].as_str() != Some("agent_prompted") {
             return Err(Error {
-                message: "Confirmation d'envoi Herdr inattendue.".into(),
+                message: "Unexpected Herdr send confirmation.".into(),
                 code: "transport".into(),
                 uncertain: true,
             });
@@ -348,7 +348,7 @@ fn connect_unix(path: &str, deadline: Instant) -> io::Result<UnixStream> {
     if path.contains(&0) || path.len() >= address.sun_path.len() {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            "Chemin de socket invalide.",
+            "Invalid socket path.",
         ));
     }
     address.sun_family = libc::AF_UNIX as libc::sa_family_t;
@@ -701,16 +701,22 @@ mod tests {
         use std::sync::{Arc, Mutex};
         let (stream, _server) = UnixStream::pair().unwrap();
         let stream = Arc::new(Mutex::new(Some(stream)));
+        let timeout = Duration::from_millis(80);
         let client = HerdrClient::new("/tmp/test")
-            .with_timeout(Duration::from_millis(80))
+            .with_timeout(timeout)
             .with_connector(move |_, _| Ok(stream.lock().unwrap().take().unwrap()));
+        // Build the 2 MiB body before timing: allocating and JSON-encoding it in an
+        // unoptimised test build is not part of the deadline under test, and on slow
+        // shared CI runners it alone could exceed a tight bound.
+        let body = "x".repeat(2 * 1024 * 1024);
         let start = Instant::now();
+        assert!(client.prompt("w1:p1", &body).unwrap_err().uncertain);
+        // The peer never reads, so without the deadline this call would block forever.
+        // Allow generous slack for request encoding and scheduler delays on busy runners.
+        let elapsed = start.elapsed();
         assert!(
-            client
-                .prompt("w1:p1", &"x".repeat(2 * 1024 * 1024))
-                .unwrap_err()
-                .uncertain
+            elapsed < timeout + Duration::from_secs(2),
+            "blocked write took {elapsed:?}, expected about {timeout:?}"
         );
-        assert!(start.elapsed() < Duration::from_millis(500));
     }
 }

@@ -18,7 +18,7 @@ fn main() {
         .and_then(|arguments| parse_args(&arguments))
         .and_then(|command| execute(command, &environment));
     if let Err(error) = result {
-        eprintln!("Herdr Queue : {error}");
+        eprintln!("Herdr Queue: {error}");
         std::process::exit(1);
     }
 }

@@ -84,7 +84,7 @@ impl Target {
         .iter()
         .any(|value| value.is_empty())
         {
-            return Err(Error::new("Destination invalide."));
+            return Err(Error::new("Invalid destination."));
         }
         Ok(target)
     }

@@ -110,7 +110,7 @@ impl DraftStore {
         let target = self.resolve_target(target)?;
         let composer = self.composer(&target)?;
         if composer.body.trim().is_empty() {
-            return Err(Error::new("Le message est vide."));
+            return Err(Error::new("The message is empty."));
         }
         register_target(&transaction, &target)?;
         let key = target.key();

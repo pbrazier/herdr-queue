@@ -15,7 +15,7 @@ pub fn discover_sessions(
 ) -> Result<Vec<HerdrSession>> {
     if let Some(socket) = socket.filter(|socket| !socket.is_empty()) {
         return Ok(vec![HerdrSession {
-            name: "socket explicite".into(),
+            name: "explicit socket".into(),
             socket_path: HerdrClient::new(socket).socket_path,
         }]);
     }
@@ -28,7 +28,7 @@ pub fn discover_sessions(
                 name: environment
                     .get("HERDR_SESSION")
                     .map(String::as_str)
-                    .unwrap_or("session courante")
+                    .unwrap_or("current session")
                     .into(),
                 socket_path: socket.clone(),
             }]);
@@ -72,7 +72,7 @@ pub fn load_agents(sessions: &[HerdrSession]) -> (Vec<Agent>, Vec<String>) {
 }
 
 fn registry_error() -> Error {
-    Error::new("La liste des sessions Herdr est invalide.")
+    Error::new("The Herdr session list is invalid.")
 }
 fn bounded_output(mut child: Child, timeout: Duration) -> Result<Vec<u8>> {
     let result = (|| -> Result<Vec<u8>> {
@@ -161,9 +161,7 @@ fn parse_registry(raw: &[u8], session: Option<&str>) -> Result<Vec<HerdrSession>
         }
     }
     if let Some(session) = session {
-        return Err(Error::new(format!(
-            "Session Herdr introuvable : {session}."
-        )));
+        return Err(Error::new(format!("Herdr session not found: {session}.")));
     }
     Ok(sessions)
 }
@@ -183,7 +181,7 @@ mod tests {
         assert_eq!(
             explicit,
             vec![HerdrSession {
-                name: "socket explicite".into(),
+                name: "explicit socket".into(),
                 socket_path: "/tmp/chosen.sock".into()
             }]
         );
@@ -207,7 +205,7 @@ mod tests {
         assert!(parse_registry(&raw, Some("absent"))
             .unwrap_err()
             .message
-            .contains("introuvable"));
+            .contains("not found"));
     }
     #[test]
     fn registry_rejects_malformed_or_missing_identity() {
