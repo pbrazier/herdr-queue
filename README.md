@@ -198,6 +198,22 @@ original French labels.
 
 Native CI tests and builds macOS Apple Silicon, macOS Intel, Linux x86-64, and Linux ARM64.
 Version tags produce release archives and SHA-256 checksums for each platform.
+The Apple Silicon binary is cross-compiled on the Intel macOS runner, because GitHub's
+macOS arm64 runners are often too busy to start the job.
+
+### Releasing
+
+From an up-to-date `main` with a clean working tree:
+
+```sh
+scripts/release.sh 0.2.2 --dry-run   # bump, run fmt/clippy/tests, then restore the files
+scripts/release.sh 0.2.2             # same checks, then commit, tag v0.2.2 and push
+```
+
+The script updates the version in `Cargo.toml`, `Cargo.lock`, `herdr-plugin.toml`,
+`install.sh`, and the launcher tests. It pushes `main` and the tag together, and the tag
+starts the workflow that publishes the release. When the release is published, run
+`herdr plugin update herdr-drafts` to install it.
 
 ## Uninstall
 
